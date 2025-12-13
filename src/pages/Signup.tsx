@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Heart, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { z } from "zod";
+
+const signupSchema = z.object({
+  firstName: z.string().trim().min(1, { message: "First name is required" }),
+  lastName: z.string().trim().min(1, { message: "Last name is required" }),
+  email: z.string().trim().email({ message: "Invalid email address" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -19,22 +32,34 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signUp, user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard");
+    }
+  }, [user, loading, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setErrors({ ...errors, [e.target.name]: "" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
 
-    if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "Please make sure both passwords are the same.",
-        variant: "destructive",
+    const validation = signupSchema.safeParse(formData);
+    if (!validation.success) {
+      const fieldErrors: Record<string, string> = {};
+      validation.error.errors.forEach((err) => {
+        const field = err.path[0] as string;
+        fieldErrors[field] = err.message;
       });
+      setErrors(fieldErrors);
       return;
     }
 
@@ -49,16 +74,46 @@ const Signup = () => {
 
     setIsLoading(true);
 
-    // Simulate signup - replace with actual auth
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Account created!",
-        description: "Welcome to CareFlow. Let's get started.",
-      });
-      navigate("/dashboard");
-    }, 1000);
+    const { error } = await signUp(
+      formData.email,
+      formData.password,
+      formData.firstName,
+      formData.lastName
+    );
+
+    setIsLoading(false);
+
+    if (error) {
+      if (error.message.includes("already registered")) {
+        toast({
+          title: "Account exists",
+          description: "An account with this email already exists. Please sign in instead.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Signup failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    toast({
+      title: "Account created!",
+      description: "Welcome to CareFlow. Let's get started.",
+    });
+    navigate("/dashboard");
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-secondary flex items-center justify-center p-4">
@@ -97,6 +152,9 @@ const Signup = () => {
                       required
                     />
                   </div>
+                  {errors.firstName && (
+                    <p className="text-xs text-destructive">{errors.firstName}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="lastName">Last Name</Label>
@@ -108,6 +166,9 @@ const Signup = () => {
                     onChange={handleChange}
                     required
                   />
+                  {errors.lastName && (
+                    <p className="text-xs text-destructive">{errors.lastName}</p>
+                  )}
                 </div>
               </div>
 
@@ -126,6 +187,9 @@ const Signup = () => {
                     required
                   />
                 </div>
+                {errors.email && (
+                  <p className="text-xs text-destructive">{errors.email}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -154,6 +218,9 @@ const Signup = () => {
                     )}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="text-xs text-destructive">{errors.password}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -171,6 +238,9 @@ const Signup = () => {
                     required
                   />
                 </div>
+                {errors.confirmPassword && (
+                  <p className="text-xs text-destructive">{errors.confirmPassword}</p>
+                )}
               </div>
 
               <div className="flex items-start gap-2">

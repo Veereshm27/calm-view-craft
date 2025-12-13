@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,8 +20,49 @@ import {
   TrendingUp,
   Stethoscope,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Profile {
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+}
 
 const Dashboard = () => {
+  const { user, signOut } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
+
+  const fetchProfile = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("first_name, last_name, email")
+      .eq("user_id", user?.id)
+      .maybeSingle();
+    
+    setProfile(data);
+  };
+
+  const getInitials = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
+    }
+    return user?.email?.[0]?.toUpperCase() || "U";
+  };
+
+  const getDisplayName = () => {
+    if (profile?.first_name) {
+      return profile.first_name;
+    }
+    return user?.email?.split("@")[0] || "User";
+  };
+
   const upcomingAppointments = [
     {
       id: 1,
@@ -58,6 +100,10 @@ const Dashboard = () => {
     { name: "Omega-3", dosage: "1000 mg", frequency: "Twice daily", remaining: 8 },
   ];
 
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
     <div className="min-h-screen bg-secondary">
       {/* Dashboard Header */}
@@ -81,7 +127,7 @@ const Dashboard = () => {
               <Link to="/profile">
                 <Avatar className="cursor-pointer">
                   <AvatarImage src="" />
-                  <AvatarFallback className="bg-primary text-primary-foreground">JD</AvatarFallback>
+                  <AvatarFallback className="bg-primary text-primary-foreground">{getInitials()}</AvatarFallback>
                 </Avatar>
               </Link>
             </div>
@@ -93,7 +139,7 @@ const Dashboard = () => {
         {/* Welcome Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Welcome back, John!</h1>
+            <h1 className="text-2xl font-bold text-foreground">Welcome back, {getDisplayName()}!</h1>
             <p className="text-muted-foreground">Here's an overview of your health status</p>
           </div>
           <Link to="/appointments/new">
@@ -218,10 +264,14 @@ const Dashboard = () => {
                 <div className="text-center">
                   <Avatar className="w-20 h-20 mx-auto mb-4">
                     <AvatarImage src="" />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-2xl">JD</AvatarFallback>
+                    <AvatarFallback className="bg-primary text-primary-foreground text-2xl">{getInitials()}</AvatarFallback>
                   </Avatar>
-                  <h3 className="font-semibold text-foreground">John Doe</h3>
-                  <p className="text-sm text-muted-foreground">john.doe@email.com</p>
+                  <h3 className="font-semibold text-foreground">
+                    {profile?.first_name && profile?.last_name 
+                      ? `${profile.first_name} ${profile.last_name}`
+                      : getDisplayName()}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{profile?.email || user?.email}</p>
                   <div className="flex gap-2 mt-4">
                     <Link to="/profile" className="flex-1">
                       <Button variant="outline" size="sm" className="w-full gap-2">
@@ -293,12 +343,14 @@ const Dashboard = () => {
                     Message Your Doctor
                   </Button>
                 </Link>
-                <Link to="/">
-                  <Button variant="ghost" className="w-full justify-start gap-3 text-destructive hover:text-destructive">
-                    <LogOut className="w-4 h-4" />
-                    Sign Out
-                  </Button>
-                </Link>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start gap-3 text-destructive hover:text-destructive"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </Button>
               </CardContent>
             </Card>
           </div>
