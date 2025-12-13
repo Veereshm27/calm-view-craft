@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,10 +11,13 @@ import { format } from "date-fns";
 import { Heart, ArrowLeft, CalendarIcon, Clock, Stethoscope, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const NewAppointment = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [date, setDate] = useState<Date>();
   const [formData, setFormData] = useState({
     doctor: "",
@@ -46,16 +48,47 @@ const NewAppointment = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to book an appointment.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
+    const selectedDoctor = doctors.find(d => d.id === formData.doctor);
+    const selectedType = appointmentTypes.find(t => t.value === formData.type);
+
+    const { error } = await supabase.from("appointments").insert({
+      user_id: user.id,
+      doctor_name: selectedDoctor?.name || "",
+      doctor_specialty: selectedDoctor?.specialty || "",
+      appointment_date: date?.toISOString().split("T")[0],
+      appointment_time: formData.time,
+      appointment_type: selectedType?.label || formData.type,
+      reason: formData.reason || null,
+      status: "scheduled",
+    });
+
+    setIsLoading(false);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to book appointment. Please try again.",
+        variant: "destructive",
+      });
+    } else {
       toast({
         title: "Appointment booked!",
         description: "You'll receive a confirmation email shortly.",
       });
       navigate("/dashboard");
-    }, 1000);
+    }
   };
 
   return (
