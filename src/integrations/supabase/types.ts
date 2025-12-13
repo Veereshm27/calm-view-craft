@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          appointment_date: string
+          appointment_time: string
+          appointment_type: string
+          created_at: string
+          doctor_name: string
+          doctor_specialty: string
+          id: string
+          reason: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          appointment_date: string
+          appointment_time: string
+          appointment_type: string
+          created_at?: string
+          doctor_name: string
+          doctor_specialty: string
+          id?: string
+          reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          appointment_date?: string
+          appointment_time?: string
+          appointment_type?: string
+          created_at?: string
+          doctor_name?: string
+          doctor_specialty?: string
+          id?: string
+          reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       medical_records: {
         Row: {
           description: string | null
@@ -52,6 +94,51 @@ export type Database = {
           reviewed_at?: string | null
           status?: string | null
           uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prescriptions: {
+        Row: {
+          created_at: string
+          dosage: string
+          frequency: string
+          id: string
+          medication_name: string
+          notes: string | null
+          pills_remaining: number
+          prescribed_by: string | null
+          refill_date: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dosage: string
+          frequency: string
+          id?: string
+          medication_name: string
+          notes?: string | null
+          pills_remaining?: number
+          prescribed_by?: string | null
+          refill_date?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dosage?: string
+          frequency?: string
+          id?: string
+          medication_name?: string
+          notes?: string | null
+          pills_remaining?: number
+          prescribed_by?: string | null
+          refill_date?: string | null
+          status?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

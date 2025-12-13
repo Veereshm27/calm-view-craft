@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 interface Profile {
   first_name: string | null;
@@ -29,15 +31,46 @@ interface Profile {
   email: string | null;
 }
 
+interface Appointment {
+  id: string;
+  doctor_name: string;
+  doctor_specialty: string;
+  appointment_date: string;
+  appointment_time: string;
+  appointment_type: string;
+  status: string;
+}
+
+interface Prescription {
+  id: string;
+  medication_name: string;
+  dosage: string;
+  frequency: string;
+  pills_remaining: number;
+  refill_date: string | null;
+  status: string;
+}
+
 const Dashboard = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      fetchProfile();
+      fetchData();
     }
   }, [user]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    await Promise.all([fetchProfile(), fetchAppointments(), fetchPrescriptions()]);
+    setLoading(false);
+  };
 
   const fetchProfile = async () => {
     const { data } = await supabase
@@ -47,6 +80,53 @@ const Dashboard = () => {
       .maybeSingle();
     
     setProfile(data);
+  };
+
+  const fetchAppointments = async () => {
+    const { data } = await supabase
+      .from("appointments")
+      .select("*")
+      .eq("user_id", user?.id)
+      .gte("appointment_date", new Date().toISOString().split("T")[0])
+      .order("appointment_date", { ascending: true })
+      .limit(5);
+    
+    setAppointments(data || []);
+  };
+
+  const fetchPrescriptions = async () => {
+    const { data } = await supabase
+      .from("prescriptions")
+      .select("*")
+      .eq("user_id", user?.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false });
+    
+    setPrescriptions(data || []);
+  };
+
+  const handleRequestRefill = async (prescription: Prescription) => {
+    const { error } = await supabase
+      .from("prescriptions")
+      .update({ 
+        status: "refill_requested",
+        refill_date: new Date().toISOString().split("T")[0]
+      })
+      .eq("id", prescription.id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to request refill. Please try again.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Refill Requested",
+        description: `Refill request for ${prescription.medication_name} has been submitted.`,
+      });
+      fetchPrescriptions();
+    }
   };
 
   const getInitials = () => {
@@ -63,30 +143,10 @@ const Dashboard = () => {
     return user?.email?.split("@")[0] || "User";
   };
 
-  const upcomingAppointments = [
-    {
-      id: 1,
-      doctor: "Dr. Sarah Johnson",
-      specialty: "General Physician",
-      date: "Dec 15, 2024",
-      time: "10:00 AM",
-      type: "Checkup",
-    },
-    {
-      id: 2,
-      doctor: "Dr. Michael Chen",
-      specialty: "Cardiologist",
-      date: "Dec 18, 2024",
-      time: "2:30 PM",
-      type: "Follow-up",
-    },
-  ];
-
-  const recentRecords = [
-    { id: 1, name: "Blood Test Results", date: "Dec 10, 2024", status: "New" },
-    { id: 2, name: "X-Ray Report", date: "Dec 5, 2024", status: "Reviewed" },
-    { id: 3, name: "Prescription", date: "Dec 1, 2024", status: "Reviewed" },
-  ];
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   const vitals = [
     { label: "Blood Pressure", value: "120/80", unit: "mmHg", trend: "normal" },
@@ -95,14 +155,11 @@ const Dashboard = () => {
     { label: "BMI", value: "22.5", unit: "", trend: "normal" },
   ];
 
-  const medications = [
-    { name: "Vitamin D", dosage: "1000 IU", frequency: "Once daily", remaining: 15 },
-    { name: "Omega-3", dosage: "1000 mg", frequency: "Twice daily", remaining: 8 },
+  const recentRecords = [
+    { id: 1, name: "Blood Test Results", date: "Dec 10, 2024", status: "New" },
+    { id: 2, name: "X-Ray Report", date: "Dec 5, 2024", status: "Reviewed" },
+    { id: 3, name: "Prescription", date: "Dec 1, 2024", status: "Reviewed" },
   ];
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
 
   return (
     <div className="min-h-screen bg-secondary">
@@ -183,36 +240,48 @@ const Dashboard = () => {
                   <CardTitle className="text-lg">Upcoming Appointments</CardTitle>
                   <CardDescription>Your scheduled visits</CardDescription>
                 </div>
-                <Link to="/appointments">
+                <Link to="/appointments/new">
                   <Button variant="ghost" size="sm" className="gap-1">
-                    View All
+                    Book New
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                 </Link>
               </CardHeader>
               <CardContent className="space-y-4">
-                {upcomingAppointments.map((apt) => (
-                  <div
-                    key={apt.id}
-                    className="flex items-center gap-4 p-4 bg-secondary rounded-xl hover:bg-secondary/80 transition-colors"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Stethoscope className="w-6 h-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground">{apt.doctor}</p>
-                      <p className="text-sm text-muted-foreground">{apt.specialty}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-foreground">{apt.date}</p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
-                        <Clock className="w-3 h-3" />
-                        {apt.time}
-                      </p>
-                    </div>
-                    <Badge variant="secondary">{apt.type}</Badge>
+                {appointments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-muted-foreground">No upcoming appointments</p>
+                    <Link to="/appointments/new">
+                      <Button variant="link" className="mt-2">Book your first appointment</Button>
+                    </Link>
                   </div>
-                ))}
+                ) : (
+                  appointments.map((apt) => (
+                    <div
+                      key={apt.id}
+                      className="flex items-center gap-4 p-4 bg-secondary rounded-xl hover:bg-secondary/80 transition-colors"
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <Stethoscope className="w-6 h-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground">{apt.doctor_name}</p>
+                        <p className="text-sm text-muted-foreground">{apt.doctor_specialty}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-foreground">
+                          {format(new Date(apt.appointment_date), "MMM d, yyyy")}
+                        </p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
+                          <Clock className="w-3 h-3" />
+                          {apt.appointment_time}
+                        </p>
+                      </div>
+                      <Badge variant="secondary">{apt.appointment_type}</Badge>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
 
@@ -299,20 +368,41 @@ const Dashboard = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {medications.map((med, index) => (
-                  <div key={index} className="p-3 bg-secondary rounded-xl">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <p className="font-medium text-foreground text-sm">{med.name}</p>
-                        <p className="text-xs text-muted-foreground">{med.dosage} • {med.frequency}</p>
-                      </div>
-                      <Badge variant={med.remaining < 10 ? "destructive" : "secondary"}>
-                        {med.remaining} left
-                      </Badge>
-                    </div>
+                {prescriptions.length === 0 ? (
+                  <div className="text-center py-4">
+                    <Pill className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">No active prescriptions</p>
                   </div>
-                ))}
-                <Button variant="outline" className="w-full gap-2" size="sm">
+                ) : (
+                  prescriptions.map((med) => (
+                    <div key={med.id} className="p-3 bg-secondary rounded-xl">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-medium text-foreground text-sm">{med.medication_name}</p>
+                          <p className="text-xs text-muted-foreground">{med.dosage} • {med.frequency}</p>
+                        </div>
+                        <Badge variant={med.pills_remaining < 10 ? "destructive" : "secondary"}>
+                          {med.pills_remaining} left
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                )}
+                <Button 
+                  variant="outline" 
+                  className="w-full gap-2" 
+                  size="sm"
+                  onClick={() => {
+                    if (prescriptions.length > 0) {
+                      handleRequestRefill(prescriptions[0]);
+                    } else {
+                      toast({
+                        title: "No prescriptions",
+                        description: "You don't have any active prescriptions to refill.",
+                      });
+                    }
+                  }}
+                >
                   <Plus className="w-4 h-4" />
                   Request Refill
                 </Button>
@@ -337,15 +427,15 @@ const Dashboard = () => {
                     View Medical Records
                   </Button>
                 </Link>
-                <Link to="/messages">
+                <Link to="/dashboard">
                   <Button variant="ghost" className="w-full justify-start gap-3">
                     <Bell className="w-4 h-4 text-primary" />
-                    Message Your Doctor
+                    Upcoming Events
                   </Button>
                 </Link>
                 <Button 
                   variant="ghost" 
-                  className="w-full justify-start gap-3 text-destructive hover:text-destructive"
+                  className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={handleSignOut}
                 >
                   <LogOut className="w-4 h-4" />
