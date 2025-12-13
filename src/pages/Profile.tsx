@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,37 +26,142 @@ import {
   Save,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+
+interface ProfileData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  date_of_birth: string;
+  gender: string;
+  address: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  blood_type: string;
+  allergies: string;
+  emergency_contact: string;
+  emergency_phone: string;
+}
 
 const Profile = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@email.com",
-    phone: "+1 (555) 123-4567",
-    dateOfBirth: "1990-05-15",
-    gender: "male",
-    address: "123 Main Street, Apt 4B",
-    city: "New York",
-    state: "NY",
-    zipCode: "10001",
-    bloodType: "A+",
-    allergies: "Penicillin, Peanuts",
-    emergencyContact: "Jane Doe",
-    emergencyPhone: "+1 (555) 987-6543",
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState<ProfileData>({
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    date_of_birth: "",
+    gender: "",
+    address: "",
+    city: "",
+    state: "",
+    zip_code: "",
+    blood_type: "",
+    allergies: "",
+    emergency_contact: "",
+    emergency_phone: "",
   });
+
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
+
+  const fetchProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user?.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setFormData({
+          first_name: data.first_name || "",
+          last_name: data.last_name || "",
+          email: data.email || user?.email || "",
+          phone: data.phone || "",
+          date_of_birth: data.date_of_birth || "",
+          gender: data.gender || "",
+          address: data.address || "",
+          city: data.city || "",
+          state: data.state || "",
+          zip_code: data.zip_code || "",
+          blood_type: data.blood_type || "",
+          allergies: data.allergies || "",
+          emergency_contact: data.emergency_contact || "",
+          emergency_phone: data.emergency_phone || "",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSave = () => {
-    setIsEditing(false);
-    toast({
-      title: "Profile updated",
-      description: "Your profile has been successfully updated.",
-    });
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          phone: formData.phone,
+          date_of_birth: formData.date_of_birth || null,
+          gender: formData.gender,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip_code: formData.zip_code,
+          blood_type: formData.blood_type,
+          allergies: formData.allergies,
+          emergency_contact: formData.emergency_contact,
+          emergency_phone: formData.emergency_phone,
+        })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setIsEditing(false);
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated.",
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getInitials = () => {
+    if (formData.first_name && formData.last_name) {
+      return `${formData.first_name[0]}${formData.last_name[0]}`.toUpperCase();
+    }
+    return user?.email?.[0]?.toUpperCase() || "U";
   };
 
   const insuranceInfo = {
@@ -65,6 +170,14 @@ const Profile = () => {
     groupNumber: "GRP-12345",
     validUntil: "Dec 31, 2025",
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-secondary">
@@ -96,7 +209,7 @@ const Profile = () => {
                 <Avatar className="w-24 h-24">
                   <AvatarImage src="" />
                   <AvatarFallback className="bg-primary text-primary-foreground text-3xl">
-                    {formData.firstName[0]}{formData.lastName[0]}
+                    {getInitials()}
                   </AvatarFallback>
                 </Avatar>
                 <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors">
@@ -105,22 +218,26 @@ const Profile = () => {
               </div>
               <div className="text-center sm:text-left flex-1">
                 <h1 className="text-2xl font-bold text-foreground">
-                  {formData.firstName} {formData.lastName}
+                  {formData.first_name && formData.last_name 
+                    ? `${formData.first_name} ${formData.last_name}`
+                    : user?.email?.split("@")[0]}
                 </h1>
-                <p className="text-muted-foreground">{formData.email}</p>
+                <p className="text-muted-foreground">{formData.email || user?.email}</p>
                 <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
-                  <Badge variant="secondary">
-                    <Droplet className="w-3 h-3 mr-1" />
-                    {formData.bloodType}
-                  </Badge>
-                  <Badge variant="secondary">Patient ID: #PAT-2024-001</Badge>
+                  {formData.blood_type && (
+                    <Badge variant="secondary">
+                      <Droplet className="w-3 h-3 mr-1" />
+                      {formData.blood_type}
+                    </Badge>
+                  )}
+                  <Badge variant="secondary">Patient ID: #PAT-{user?.id.slice(0, 8)}</Badge>
                 </div>
               </div>
               <div>
                 {isEditing ? (
-                  <Button onClick={handleSave} className="gap-2">
+                  <Button onClick={handleSave} className="gap-2" disabled={saving}>
                     <Save className="w-4 h-4" />
-                    Save Changes
+                    {saving ? "Saving..." : "Save Changes"}
                   </Button>
                 ) : (
                   <Button onClick={() => setIsEditing(true)} variant="outline">
@@ -154,21 +271,21 @@ const Profile = () => {
               <CardContent className="space-y-6">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
+                    <Label htmlFor="first_name">First Name</Label>
                     <Input
-                      id="firstName"
-                      name="firstName"
-                      value={formData.firstName}
+                      id="first_name"
+                      name="first_name"
+                      value={formData.first_name}
                       onChange={handleChange}
                       disabled={!isEditing}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
+                    <Label htmlFor="last_name">Last Name</Label>
                     <Input
-                      id="lastName"
-                      name="lastName"
-                      value={formData.lastName}
+                      id="last_name"
+                      name="last_name"
+                      value={formData.last_name}
                       onChange={handleChange}
                       disabled={!isEditing}
                     />
@@ -185,9 +302,8 @@ const Profile = () => {
                         name="email"
                         type="email"
                         value={formData.email}
-                        onChange={handleChange}
                         className="pl-10"
-                        disabled={!isEditing}
+                        disabled
                       />
                     </div>
                   </div>
@@ -209,14 +325,14 @@ const Profile = () => {
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Label htmlFor="date_of_birth">Date of Birth</Label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
-                        id="dateOfBirth"
-                        name="dateOfBirth"
+                        id="date_of_birth"
+                        name="date_of_birth"
                         type="date"
-                        value={formData.dateOfBirth}
+                        value={formData.date_of_birth}
                         onChange={handleChange}
                         className="pl-10"
                         disabled={!isEditing}
@@ -280,11 +396,11 @@ const Profile = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="zipCode">ZIP Code</Label>
+                    <Label htmlFor="zip_code">ZIP Code</Label>
                     <Input
-                      id="zipCode"
-                      name="zipCode"
-                      value={formData.zipCode}
+                      id="zip_code"
+                      name="zip_code"
+                      value={formData.zip_code}
                       onChange={handleChange}
                       disabled={!isEditing}
                     />
@@ -307,10 +423,10 @@ const Profile = () => {
               <CardContent className="space-y-6">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="bloodType">Blood Type</Label>
+                    <Label htmlFor="blood_type">Blood Type</Label>
                     <Select
-                      value={formData.bloodType}
-                      onValueChange={(value) => setFormData({ ...formData, bloodType: value })}
+                      value={formData.blood_type}
+                      onValueChange={(value) => setFormData({ ...formData, blood_type: value })}
                       disabled={!isEditing}
                     >
                       <SelectTrigger>
@@ -350,21 +466,21 @@ const Profile = () => {
                   <h4 className="font-medium text-foreground mb-4">Emergency Contact</h4>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="emergencyContact">Contact Name</Label>
+                      <Label htmlFor="emergency_contact">Contact Name</Label>
                       <Input
-                        id="emergencyContact"
-                        name="emergencyContact"
-                        value={formData.emergencyContact}
+                        id="emergency_contact"
+                        name="emergency_contact"
+                        value={formData.emergency_contact}
                         onChange={handleChange}
                         disabled={!isEditing}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="emergencyPhone">Contact Phone</Label>
+                      <Label htmlFor="emergency_phone">Contact Phone</Label>
                       <Input
-                        id="emergencyPhone"
-                        name="emergencyPhone"
-                        value={formData.emergencyPhone}
+                        id="emergency_phone"
+                        name="emergency_phone"
+                        value={formData.emergency_phone}
                         onChange={handleChange}
                         disabled={!isEditing}
                       />
