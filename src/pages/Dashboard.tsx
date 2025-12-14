@@ -364,7 +364,9 @@ const Dashboard = () => {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">Medications</CardTitle>
-                  <Pill className="w-5 h-5 text-primary" />
+                  <Link to="/prescriptions">
+                    <Pill className="w-5 h-5 text-primary hover:text-primary/80" />
+                  </Link>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -374,7 +376,7 @@ const Dashboard = () => {
                     <p className="text-sm text-muted-foreground">No active prescriptions</p>
                   </div>
                 ) : (
-                  prescriptions.map((med) => (
+                  prescriptions.slice(0, 3).map((med) => (
                     <div key={med.id} className="p-3 bg-secondary rounded-xl">
                       <div className="flex justify-between items-start mb-2">
                         <div>
@@ -388,24 +390,12 @@ const Dashboard = () => {
                     </div>
                   ))
                 )}
-                <Button 
-                  variant="outline" 
-                  className="w-full gap-2" 
-                  size="sm"
-                  onClick={() => {
-                    if (prescriptions.length > 0) {
-                      handleRequestRefill(prescriptions[0]);
-                    } else {
-                      toast({
-                        title: "No prescriptions",
-                        description: "You don't have any active prescriptions to refill.",
-                      });
-                    }
-                  }}
-                >
-                  <Plus className="w-4 h-4" />
-                  Request Refill
-                </Button>
+                <Link to="/prescriptions">
+                  <Button variant="outline" className="w-full gap-2" size="sm">
+                    <Plus className="w-4 h-4" />
+                    Manage Prescriptions
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
 
@@ -427,10 +417,16 @@ const Dashboard = () => {
                     View Medical Records
                   </Button>
                 </Link>
-                <Link to="/dashboard">
+                <Link to="/prescriptions">
                   <Button variant="ghost" className="w-full justify-start gap-3">
-                    <Bell className="w-4 h-4 text-primary" />
-                    Upcoming Events
+                    <Pill className="w-4 h-4 text-primary" />
+                    Manage Prescriptions
+                  </Button>
+                </Link>
+                <Link to="/doctors">
+                  <Button variant="ghost" className="w-full justify-start gap-3">
+                    <Stethoscope className="w-4 h-4 text-primary" />
+                    Find Doctors
                   </Button>
                 </Link>
                 <Button 
