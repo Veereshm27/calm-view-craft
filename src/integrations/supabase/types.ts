@@ -56,6 +56,95 @@ export type Database = {
         }
         Relationships: []
       }
+      doctor_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          doctor_id: string
+          id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          doctor_id: string
+          id?: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_reviews_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctors: {
+        Row: {
+          available_days: string[] | null
+          bio: string | null
+          consultation_fee: number | null
+          created_at: string
+          email: string | null
+          experience_years: number | null
+          hospital: string | null
+          id: string
+          image_url: string | null
+          name: string
+          phone: string | null
+          rating: number | null
+          specialty: string
+          total_reviews: number | null
+          updated_at: string
+        }
+        Insert: {
+          available_days?: string[] | null
+          bio?: string | null
+          consultation_fee?: number | null
+          created_at?: string
+          email?: string | null
+          experience_years?: number | null
+          hospital?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          phone?: string | null
+          rating?: number | null
+          specialty: string
+          total_reviews?: number | null
+          updated_at?: string
+        }
+        Update: {
+          available_days?: string[] | null
+          bio?: string | null
+          consultation_fee?: number | null
+          created_at?: string
+          email?: string | null
+          experience_years?: number | null
+          hospital?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          phone?: string | null
+          rating?: number | null
+          specialty?: string
+          total_reviews?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       medical_records: {
         Row: {
           description: string | null
