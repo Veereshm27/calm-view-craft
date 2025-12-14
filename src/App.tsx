@@ -16,6 +16,8 @@ import Contact from "./pages/Contact";
 import NewAppointment from "./pages/NewAppointment";
 import MedicalRecords from "./pages/MedicalRecords";
 import Settings from "./pages/Settings";
+import Prescriptions from "./pages/Prescriptions";
+import Doctors from "./pages/Doctors";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -74,6 +76,15 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/prescriptions"
+              element={
+                <ProtectedRoute>
+                  <Prescriptions />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/doctors" element={<Doctors />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
