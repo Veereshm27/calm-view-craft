@@ -2,3 +2,6 @@ project_id = "qrwsuyjmxqltnjjdubje"
 
 [functions.send-notifications]
 verify_jwt = true
+
+[functions.create-video-room]
+verify_jwt = false
