@@ -430,6 +430,12 @@ const Dashboard = () => {
                     Manage Prescriptions
                   </Button>
                 </Link>
+                <Link to="/health">
+                  <Button variant="ghost" className="w-full justify-start gap-3">
+                    <Activity className="w-4 h-4 text-primary" />
+                    Health Metrics
+                  </Button>
+                </Link>
                 <Link to="/doctors">
                   <Button variant="ghost" className="w-full justify-start gap-3">
                     <Stethoscope className="w-4 h-4 text-primary" />

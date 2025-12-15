@@ -20,6 +20,7 @@ import Prescriptions from "./pages/Prescriptions";
 import Doctors from "./pages/Doctors";
 import Telemedicine from "./pages/Telemedicine";
 import AppointmentCalendarView from "./pages/AppointmentCalendarView";
+import HealthMetrics from "./pages/HealthMetrics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -100,6 +101,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppointmentCalendarView />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/health"
+              element={
+                <ProtectedRoute>
+                  <HealthMetrics />
                 </ProtectedRoute>
               }
             />
