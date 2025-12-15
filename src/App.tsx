@@ -18,6 +18,8 @@ import MedicalRecords from "./pages/MedicalRecords";
 import Settings from "./pages/Settings";
 import Prescriptions from "./pages/Prescriptions";
 import Doctors from "./pages/Doctors";
+import Telemedicine from "./pages/Telemedicine";
+import AppointmentCalendarView from "./pages/AppointmentCalendarView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -85,6 +87,22 @@ const App = () => (
               }
             />
             <Route path="/doctors" element={<Doctors />} />
+            <Route
+              path="/telemedicine"
+              element={
+                <ProtectedRoute>
+                  <Telemedicine />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/appointments/calendar"
+              element={
+                <ProtectedRoute>
+                  <AppointmentCalendarView />
+                </ProtectedRoute>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -19,6 +19,7 @@ import {
   ChevronRight,
   TrendingUp,
   Stethoscope,
+  Video,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -405,10 +406,16 @@ const Dashboard = () => {
                 <CardTitle className="text-lg">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Link to="/appointments/new">
+                <Link to="/appointments/calendar">
                   <Button variant="ghost" className="w-full justify-start gap-3">
                     <Calendar className="w-4 h-4 text-primary" />
-                    Schedule Appointment
+                    Calendar View
+                  </Button>
+                </Link>
+                <Link to="/telemedicine">
+                  <Button variant="ghost" className="w-full justify-start gap-3">
+                    <Video className="w-4 h-4 text-primary" />
+                    Video Consultation
                   </Button>
                 </Link>
                 <Link to="/records">
