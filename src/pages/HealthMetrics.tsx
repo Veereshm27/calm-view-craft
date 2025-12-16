@@ -8,11 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { format, subDays } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   Heart,
   ArrowLeft,
@@ -23,6 +26,9 @@ import {
   Droplets,
   TrendingUp,
   Loader2,
+  Download,
+  FileText,
+  FileSpreadsheet,
 } from "lucide-react";
 
 interface HealthMetric {
@@ -116,6 +122,92 @@ const HealthMetrics = () => {
     setSubmitting(false);
   };
 
+  const exportToCSV = () => {
+    if (metrics.length === 0) {
+      toast({ title: "No data", description: "No metrics to export.", variant: "destructive" });
+      return;
+    }
+
+    const headers = ["Date", "Type", "Value", "Secondary Value", "Unit", "Notes"];
+    const rows = metrics.map((m) => [
+      format(new Date(m.recorded_at), "yyyy-MM-dd HH:mm"),
+      metricTypes.find((t) => t.value === m.metric_type)?.label || m.metric_type,
+      m.value,
+      m.secondary_value || "",
+      m.unit,
+      m.notes || "",
+    ]);
+
+    const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `health-metrics-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({ title: "Success", description: "Health metrics exported as CSV." });
+  };
+
+  const exportToPDF = () => {
+    if (metrics.length === 0) {
+      toast({ title: "No data", description: "No metrics to export.", variant: "destructive" });
+      return;
+    }
+
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(20);
+    doc.text("Health Metrics Report", 14, 22);
+    
+    // Date range
+    doc.setFontSize(10);
+    doc.text(`Generated: ${format(new Date(), "MMMM d, yyyy")}`, 14, 30);
+    doc.text(`Period: Last 30 days`, 14, 36);
+
+    // Summary section
+    doc.setFontSize(14);
+    doc.text("Summary", 14, 48);
+    
+    let yPos = 56;
+    metricTypes.forEach((type) => {
+      const typeMetrics = metrics.filter((m) => m.metric_type === type.value);
+      if (typeMetrics.length > 0) {
+        const latest = typeMetrics[typeMetrics.length - 1];
+        const avg = typeMetrics.reduce((sum, m) => sum + m.value, 0) / typeMetrics.length;
+        doc.setFontSize(10);
+        doc.text(
+          `${type.label}: Latest ${latest.value}${latest.secondary_value ? `/${latest.secondary_value}` : ""} ${type.unit} | Avg: ${avg.toFixed(1)} ${type.unit}`,
+          14,
+          yPos
+        );
+        yPos += 7;
+      }
+    });
+
+    // Table
+    const tableData = metrics.map((m) => [
+      format(new Date(m.recorded_at), "MMM d, yyyy HH:mm"),
+      metricTypes.find((t) => t.value === m.metric_type)?.label || m.metric_type,
+      m.secondary_value ? `${m.value}/${m.secondary_value}` : m.value.toString(),
+      m.unit,
+      m.notes || "-",
+    ]);
+
+    autoTable(doc, {
+      startY: yPos + 10,
+      head: [["Date", "Type", "Value", "Unit", "Notes"]],
+      body: tableData,
+      theme: "striped",
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    doc.save(`health-metrics-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    toast({ title: "Success", description: "Health metrics exported as PDF." });
+  };
+
   const getChartData = (type: string) => {
     return metrics
       .filter((m) => m.metric_type === type)
@@ -145,13 +237,31 @@ const HealthMetrics = () => {
               </div>
               <span className="text-xl font-bold text-foreground">CareFlow</span>
             </Link>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <Link to="/dashboard">
                 <Button variant="ghost" className="gap-2">
                   <ArrowLeft className="w-4 h-4" />
                   Dashboard
                 </Button>
               </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Download className="w-4 h-4" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={exportToPDF} className="gap-2 cursor-pointer">
+                    <FileText className="w-4 h-4" />
+                    Export as PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportToCSV} className="gap-2 cursor-pointer">
+                    <FileSpreadsheet className="w-4 h-4" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="gap-2">
