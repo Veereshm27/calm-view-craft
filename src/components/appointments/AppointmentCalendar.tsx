@@ -27,6 +27,27 @@ const AppointmentCalendar = ({ appointments, onAppointmentUpdate }: AppointmentC
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
 
+  const convertTo24Hour = (time12h: string): string => {
+    const [time, modifier] = time12h.split(" ");
+    let [hours, minutes] = time.split(":");
+    
+    if (hours === "12") {
+      hours = modifier?.toUpperCase() === "AM" ? "00" : "12";
+    } else if (modifier?.toUpperCase() === "PM") {
+      hours = String(parseInt(hours, 10) + 12);
+    }
+    
+    return `${hours.padStart(2, "0")}:${minutes || "00"}`;
+  };
+
+  const addMinutes = (time: string, mins: number): string => {
+    const [hours, minutes] = time.split(":").map(Number);
+    const totalMinutes = hours * 60 + minutes + mins;
+    const newHours = Math.floor(totalMinutes / 60) % 24;
+    const newMinutes = totalMinutes % 60;
+    return `${String(newHours).padStart(2, "0")}:${String(newMinutes).padStart(2, "0")}`;
+  };
+
   const events = appointments.map((apt) => {
     const [hours, minutes] = apt.appointment_time.split(":");
     const startDate = new Date(apt.appointment_date);
@@ -49,27 +70,6 @@ const AppointmentCalendar = ({ appointments, onAppointmentUpdate }: AppointmentC
       },
     };
   });
-
-  const convertTo24Hour = (time12h: string): string => {
-    const [time, modifier] = time12h.split(" ");
-    let [hours, minutes] = time.split(":");
-    
-    if (hours === "12") {
-      hours = modifier?.toUpperCase() === "AM" ? "00" : "12";
-    } else if (modifier?.toUpperCase() === "PM") {
-      hours = String(parseInt(hours, 10) + 12);
-    }
-    
-    return `${hours.padStart(2, "0")}:${minutes || "00"}`;
-  };
-
-  const addMinutes = (time: string, mins: number): string => {
-    const [hours, minutes] = time.split(":").map(Number);
-    const totalMinutes = hours * 60 + minutes + mins;
-    const newHours = Math.floor(totalMinutes / 60) % 24;
-    const newMinutes = totalMinutes % 60;
-    return `${String(newHours).padStart(2, "0")}:${String(newMinutes).padStart(2, "0")}`;
-  };
 
   const handleEventDrop = useCallback(
     async (info: any) => {
