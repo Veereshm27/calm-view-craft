@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import DoctorsDialog from "@/components/doctors/DoctorsDialog";
 
 interface Profile {
   first_name: string | null;
@@ -61,6 +62,7 @@ const Dashboard = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
+  const [doctorsDialogOpen, setDoctorsDialogOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -443,12 +445,14 @@ const Dashboard = () => {
                     Health Metrics
                   </Button>
                 </Link>
-                <Link to="/doctors">
-                  <Button variant="ghost" className="w-full justify-start gap-3">
-                    <Stethoscope className="w-4 h-4 text-primary" />
-                    Find Doctors
-                  </Button>
-                </Link>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start gap-3"
+                  onClick={() => setDoctorsDialogOpen(true)}
+                >
+                  <Stethoscope className="w-4 h-4 text-primary" />
+                  Find Doctors
+                </Button>
                 <Button 
                   variant="ghost" 
                   className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10"
@@ -462,6 +466,8 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      <DoctorsDialog open={doctorsDialogOpen} onOpenChange={setDoctorsDialogOpen} />
     </div>
   );
 };
