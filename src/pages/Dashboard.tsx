@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Stethoscope,
   Video,
+  MessageSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -422,6 +423,12 @@ const Dashboard = () => {
                   <Button variant="ghost" className="w-full justify-start gap-3">
                     <FileText className="w-4 h-4 text-primary" />
                     View Medical Records
+                  </Button>
+                </Link>
+                <Link to="/messages">
+                  <Button variant="ghost" className="w-full justify-start gap-3">
+                    <MessageSquare className="w-4 h-4 text-primary" />
+                    Messages
                   </Button>
                 </Link>
                 <Link to="/prescriptions">
