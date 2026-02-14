@@ -104,12 +104,12 @@ const Messages = () => {
 
   const fetchDoctors = async () => {
     const { data, error } = await supabase
-      .from("doctors")
+      .from("doctors_public" as any)
       .select("id, name, specialty, image_url")
       .order("name");
 
     if (!error && data) {
-      setDoctors(data);
+      setDoctors(data as unknown as Doctor[]);
     }
   };
 
@@ -125,12 +125,13 @@ const Messages = () => {
       // Group by doctor
       const doctorIds = [...new Set(messagesData.map(m => m.doctor_id))];
       const { data: doctorsData } = await supabase
-        .from("doctors")
+        .from("doctors_public" as any)
         .select("id, name, specialty, image_url")
         .in("id", doctorIds);
 
       if (doctorsData) {
-        const convos: Conversation[] = doctorsData.map(doctor => {
+        const typedDoctors = doctorsData as unknown as Doctor[];
+        const convos: Conversation[] = typedDoctors.map(doctor => {
           const doctorMessages = messagesData.filter(m => m.doctor_id === doctor.id);
           const unreadCount = doctorMessages.filter(
             m => m.receiver_id === user?.id && !m.is_read

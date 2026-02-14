@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,14 +7,35 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const DAILY_API_KEY = Deno.env.get("DAILY_API_KEY");
-    
     if (!DAILY_API_KEY) {
       console.error("DAILY_API_KEY not configured");
       return new Response(
@@ -23,9 +45,23 @@ serve(async (req) => {
     }
 
     const { appointmentId } = await req.json();
+
+    // Verify the user owns this appointment
+    const { data: appointment, error: apptError } = await supabaseClient
+      .from("appointments")
+      .select("user_id")
+      .eq("id", appointmentId)
+      .single();
+
+    if (apptError || !appointment || appointment.user_id !== user.id) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Not your appointment" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log("Creating room for appointment:", appointmentId);
 
-    // Create a Daily.co room
     const roomResponse = await fetch("https://api.daily.co/v1/rooms", {
       method: "POST",
       headers: {
@@ -36,7 +72,7 @@ serve(async (req) => {
         name: `careflow-${appointmentId}-${Date.now()}`,
         privacy: "public",
         properties: {
-          exp: Math.floor(Date.now() / 1000) + 3600, // Expires in 1 hour
+          exp: Math.floor(Date.now() / 1000) + 3600,
           enable_chat: true,
           enable_screenshare: true,
           enable_knocking: false,

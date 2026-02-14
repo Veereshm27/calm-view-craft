@@ -139,18 +139,13 @@ const MedicalRecords = () => {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("medical-documents")
-        .getPublicUrl(filePath);
-
-      // Create record in database
+      // Create record in database (store the file path, not a public URL)
       const { error: dbError } = await supabase.from("medical_records").insert({
         user_id: user.id,
         name: uploadForm.name,
         record_type: uploadForm.recordType,
         description: uploadForm.description || null,
-        file_url: urlData.publicUrl,
+        file_url: filePath,
         file_name: uploadForm.file.name,
         file_size: uploadForm.file.size,
         status: "New",
@@ -184,8 +179,7 @@ const MedicalRecords = () => {
     try {
       // Delete from storage if file exists
       if (record.file_url && user) {
-        const filePath = record.file_url.split("/").slice(-2).join("/");
-        await supabase.storage.from("medical-documents").remove([filePath]);
+        await supabase.storage.from("medical-documents").remove([record.file_url]);
       }
 
       // Delete from database
@@ -439,16 +433,32 @@ const MedicalRecords = () => {
                       <div className="flex items-center gap-2">
                         {record.file_url && (
                           <>
-                            <a href={record.file_url} target="_blank" rel="noopener noreferrer">
-                              <Button variant="ghost" size="icon" title="View">
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                            </a>
-                            <a href={record.file_url} download={record.file_name}>
-                              <Button variant="ghost" size="icon" title="Download">
-                                <Download className="w-4 h-4" />
-                              </Button>
-                            </a>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="View"
+                              onClick={async () => {
+                                const { data } = await supabase.storage
+                                  .from("medical-documents")
+                                  .createSignedUrl(record.file_url!, 3600);
+                                if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                              }}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Download"
+                              onClick={async () => {
+                                const { data } = await supabase.storage
+                                  .from("medical-documents")
+                                  .createSignedUrl(record.file_url!, 3600, { download: record.file_name || true });
+                                if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                              }}
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
                           </>
                         )}
                         <Button
