@@ -89,6 +89,13 @@ export type Database = {
             referencedRelation: "doctors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "doctor_reviews_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       doctors: {
@@ -259,6 +266,13 @@ export type Database = {
             referencedRelation: "doctors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "messages_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       prescriptions: {
@@ -374,7 +388,54 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      doctors_public: {
+        Row: {
+          available_days: string[] | null
+          bio: string | null
+          consultation_fee: number | null
+          created_at: string | null
+          experience_years: number | null
+          hospital: string | null
+          id: string | null
+          image_url: string | null
+          name: string | null
+          rating: number | null
+          specialty: string | null
+          total_reviews: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          available_days?: string[] | null
+          bio?: string | null
+          consultation_fee?: number | null
+          created_at?: string | null
+          experience_years?: number | null
+          hospital?: string | null
+          id?: string | null
+          image_url?: string | null
+          name?: string | null
+          rating?: number | null
+          specialty?: string | null
+          total_reviews?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          available_days?: string[] | null
+          bio?: string | null
+          consultation_fee?: number | null
+          created_at?: string | null
+          experience_years?: number | null
+          hospital?: string | null
+          id?: string | null
+          image_url?: string | null
+          name?: string | null
+          rating?: number | null
+          specialty?: string | null
+          total_reviews?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

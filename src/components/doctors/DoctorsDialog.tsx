@@ -69,12 +69,12 @@ const DoctorsDialog = ({ open, onOpenChange }: DoctorsDialogProps) => {
     queryKey: ["doctors"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("doctors")
+        .from("doctors_public" as any)
         .select("*")
         .order("rating", { ascending: false });
 
       if (error) throw error;
-      return data as Doctor[];
+      return data as unknown as Doctor[];
     },
     enabled: open,
   });
